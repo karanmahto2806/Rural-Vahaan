@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Track Ride - Rural Vahaan</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        .track-container { max-width: 800px; margin: 0 auto; }
+        .ride-code-display { font-size: 2rem; font-weight: bold; letter-spacing: 5px; background: linear-gradient(135deg, #1e293b, #334155); color: white; display: inline-block; padding: 0.5rem 1.5rem; border-radius: 50px; font-family: monospace; margin: 1rem 0; }
+        .share-buttons { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; margin-top: 1rem; }
+        .share-btn { width: auto; padding: 0.5rem 1rem; margin: 0; }
+        .share-btn.whatsapp { background: #25D366; }
+        .share-btn.copy { background: #64748b; }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="logo">🚜 Rural Vahaan <span>Track Ride</span></div>
+        <div class="nav-links"><a href="index.html">Home</a></div>
+    </nav>
+
+    <div class="container track-container">
+        <div class="form-card" id="codeInputSection">
+            <h2>🔍 Track Your Family Member's Ride</h2>
+            <p>Enter the ride code shared by your family member</p>
+            <div id="alert" class="alert" style="display: none;"></div>
+            <input type="text" id="rideCode" placeholder="e.g., RV-28A9F3" style="text-transform: uppercase;">
+            <button onclick="trackRide()">Track Now →</button>
+        </div>
+
+        <div id="trackingSection" style="display: none;">
+            <div class="form-card"><h2>🚗 Ride Status</h2><div id="rideStatus"></div></div>
+            <div class="map-card"><h2>📍 Live Location</h2><div id="map" class="map"></div></div>
+            <div class="form-card"><h2>📱 Share Ride Code</h2><div style="text-align: center;"><div class="ride-code-display" id="displayRideCode">-</div><div class="share-buttons"><button class="share-btn whatsapp" onclick="shareOnWhatsApp()">📱 WhatsApp</button><button class="share-btn copy" onclick="copyRideCode()">📋 Copy Code</button></div></div></div>
+            <div class="form-card"><h2>🆘 Emergency</h2><button onclick="sendEmergencyAlert()" style="background: linear-gradient(135deg, #ef4444, #dc2626);">🚨 Send Emergency Alert</button><p style="margin-top: 1rem;">🚓 Police: 100 | 🚑 Ambulance: 102 | 👩 Women Helpline: 1091</p></div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        const API_URL = 'http://localhost:5000/api';
+        let map = null, vehicleMarker = null, refreshInterval = null, currentRide = null, currentRideCode = null;
+        
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('code')) { document.getElementById('rideCode').value = urlParams.get('code'); trackRide(); }
+        
+        async function trackRide() {
+            const code = document.getElementById('rideCode').value.trim().toUpperCase();
+            if (!code) { showAlert('Enter ride code', 'error'); return; }
+            currentRideCode = code;
+            
+            const response = await fetch(`${API_URL}/rides/track/${code}`);
+            const data = await response.json();
+            if (data.success) { currentRide = data.ride; displayRideInfo(); showTrackingSection(); startAutoRefresh(); }
+            else { showAlert('Ride not found', 'error'); hideTrackingSection(); }
+        }
+        
+        function displayRideInfo() {
+            document.getElementById('displayRideCode').innerText = currentRide.ride_code;
+            const statusClass = currentRide.status === 'pending' ? 'status-pending' : currentRide.status === 'accepted' ? 'status-accepted' : currentRide.status === 'started' ? 'status-started' : 'status-completed';
+            document.getElementById('rideStatus').innerHTML = `<div><span class="status-badge ${statusClass}">${currentRide.status.toUpperCase()}</span><br><br><strong>👤 Passenger:</strong> ${currentRide.passenger_name}<br><strong>🚗 Driver:</strong> ${currentRide.driver_name}<br><strong>🚙 Vehicle:</strong> ${currentRide.vehicle_name}<br><strong>💰 Fare:</strong> ₹${currentRide.fare}</div>`;
+            initMap();
+        }
+        
+        function initMap() {
+            if (map) map.remove();
+            const center = (currentRide.current_lat && currentRide.current_lng) ? [currentRide.current_lat, currentRide.current_lng] : [28.6139, 77.2090];
+            map = L.map('map').setView(center, 13);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
+            updateMapMarkers();
+        }
+        
+        function updateMapMarkers() {
+            if (vehicleMarker) map.removeLayer(vehicleMarker);
+            if (currentRide.current_lat && currentRide.current_lng) {
+                vehicleMarker = L.marker([currentRide.current_lat, currentRide.current_lng], { icon: L.divIcon({ html: '🚗', iconSize: [35, 35] }) }).addTo(map).bindPopup(`Driver: ${currentRide.driver_name}<br>Status: ${currentRide.status}`);
+                map.setView([currentRide.current_lat, currentRide.current_lng], 13);
+            }
+        }
+        
+        function startAutoRefresh() { refreshInterval = setInterval(async () => { const res = await fetch(`${API_URL}/rides/track/${currentRideCode}`); const data = await res.json(); if (data.success) { currentRide = data.ride; updateMapMarkers(); } }, 5000); }
+        
+        function showTrackingSection() { document.getElementById('codeInputSection').style.display = 'none'; document.getElementById('trackingSection').style.display = 'block'; }
+        function hideTrackingSection() { document.getElementById('codeInputSection').style.display = 'block'; document.getElementById('trackingSection').style.display = 'none'; if (refreshInterval) clearInterval(refreshInterval); if (map) map.remove(); }
+        
+        function shareOnWhatsApp() { window.open(`https://wa.me/?text=Rural Vahaan Ride Code: ${currentRideCode}`, '_blank'); }
+        function copyRideCode() { navigator.clipboard.writeText(currentRideCode); alert('Code copied!'); }
+        async function sendEmergencyAlert() { if (confirm('Send SOS?')) { await fetch(`${API_URL}/emergency/sos`, { method: 'POST', headers: { 'Authorization': `Bearer ${localStorage.getItem('token') || ''}` } }); alert('SOS Sent! Emergency contacts: Police 100, Ambulance 102'); } }
+        
+        function showAlert(msg, type) { const div = document.getElementById('alert'); div.textContent = msg; div.className = `alert alert-${type}`; div.style.display = 'block'; setTimeout(() => div.style.display = 'none', 3000); }
+    </script>
+</body>
+</html>

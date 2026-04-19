@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rural Vahaan - Rural Transport Platform</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚜</text></svg>">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="logo">🚜 Rural Vahaan <span>Beta</span></div>
+        <div class="nav-links">
+            <a href="login.html">Login</a>
+            <a href="register.html">Register</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="hero">
+            <h1>🚜 Connect with Vehicles in Your Village</h1>
+            <p>Tractors | Bikes | Cars | Mini-Trucks | Tempo | JCB | Auto | E-Rickshaw | Jeep</p>
+            <p>📍 Find vehicles within <strong>5km radius</strong> | 🔐 Safe rides with family tracking</p>
+            <a href="register.html" class="btn" style="display: inline-block; text-decoration: none; margin-top: 1rem;">Get Started →</a>
+        </div>
+
+        <div class="features">
+            <div class="feature"><div class="feature-icon">🚜</div><h3>Find Nearby Vehicles</h3><p>Search vehicles within 5km of your location</p></div>
+            <div class="feature"><div class="feature-icon">🔐</div><h3>Safe & Secure</h3><p>Unique ride code for family tracking</p></div>
+            <div class="feature"><div class="feature-icon">📍</div><h3>Live Tracking</h3><p>Track your ride in real-time</p></div>
+            <div class="feature"><div class="feature-icon">🆘</div><h3>Emergency SOS</h3><p>One-click emergency assistance</p></div>
+        </div>
+
+        <div class="form-card" style="text-align: center;">
+            <h2>🔍 Track Your Ride</h2>
+            <p>Enter the ride code shared by your family member</p>
+            <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                <input type="text" id="trackCode" placeholder="Enter Ride Code (e.g., RV-28A9F3)" style="flex: 2;">
+                <button onclick="trackRide()" style="flex: 1;">Track Now →</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function trackRide() {
+            const code = document.getElementById('trackCode').value.trim().toUpperCase();
+            if (!code) { alert('Please enter a ride code'); return; }
+            window.location.href = `track.html?code=${code}`;
+        }
+    </script>
+</body>
+</html>
